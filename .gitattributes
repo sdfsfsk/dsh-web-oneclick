@@ -1,0 +1,5 @@
+# .bat 是 GBK + CRLF 字节（cmd.exe 在中文 Windows 上按 ANSI/GBK 解析批处理，
+# 且多行块与 goto 标签要求 CRLF），.ps1 是带 BOM 的 UTF-8 + CRLF（Windows
+# PowerShell 5.1 靠 BOM 识别 UTF-8）。全部按原字节提交与分发，禁止 git 规范化。
+*.bat -text
+*.ps1 -text
