@@ -20,6 +20,16 @@ if errorlevel 1 (
     exit /b 1
 )
 
+rem 端口已被占用：多半是已有 dsh web 实例在运行，直接打开浏览器访问它
+curl.exe -s -o nul --max-time 2 http://127.0.0.1:%PORT%
+if not errorlevel 1 (
+    echo [start] 端口 %PORT% 已有 dsh web 在运行，直接打开浏览器。
+    echo [start] 如需重启，请先关闭正在运行的 dsh web 窗口，再双击本脚本。
+    start "" http://127.0.0.1:%PORT%
+    pause
+    exit /b 0
+)
+
 rem 探测局域网 IP，仅用于展示手机访问地址
 set "LAN_IP="
 for /f "delims=" %%i in ('powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0get-lan-ip.ps1"') do set "LAN_IP=%%i"
