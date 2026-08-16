@@ -13,6 +13,7 @@
 | `update.bat` | 一键更新：探测本地代理 → `git pull --ff-only` → `pnpm install` → `pnpm run build` → 更新社区插件（web 与 dsh-tui 两个 profile） → 更新 Mnemon CLI |
 | `update-mnemon.ps1` | Mnemon CLI 更新助手（查最新 release、SHA256 校验、解压安装），由 update.bat 调用 |
 | `get-lan-ip.ps1` | 局域网 IP 探测助手，由 start.bat 调用 |
+| `link-skins.ps1` | 多 profile 皮肤兼容：把 web profile 的独立皮肤包 junction 进全局模块回退目录，修复 dsh-tui 等 profile 应用皮肤后无法启动的问题 |
 | `examples/cordis.patch.yml` | 局域网开放补丁（把 dsh web 绑定到 0.0.0.0），手机/平板访问的关键 |
 
 ## 快速开始
@@ -112,6 +113,9 @@ allowBuilds:
 
 **手机能打开页面但加载不出工作区？**
 你打开的是桌面版界面（见"手机的正确用法"）。去电脑端配对面板扫码，用移动端界面。
+
+**dsh-tui 等其他 profile 报 ERR_MODULE_NOT_FOUND / Cannot find package '@linxin666/dsh-client-ui-skin-xxx'？**
+皮肤中心把"当前应用的独立皮肤"以包名写进**全局**补丁层（`%USERPROFILE%\.dsh\cordis.patch.yml`），所有 profile 启动时都会加载它；没装皮肤包的 profile 就会启动失败。注意不要把皮肤包直接装进那些 profile——它们会被当作 bundle 挂载，与全局插入产生 `duplicate loader entry id` 冲突。正确解法是跑一遍 `link-skins.ps1`：把皮肤包以 junction 形式放进启动器的全局模块回退目录（`profiles/node_modules`），能解析、不挂载、不冲突，且皮肤更新后无需重跑。
 
 ## 许可证
 
