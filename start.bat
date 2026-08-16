@@ -2,6 +2,7 @@
 setlocal
 
 rem 一键启动 DeepSeek Harness Web GUI（开放局域网）：
+rem   启动前自动清理端口占用（僵留的 dsh web 实例等，见 clear-port.ps1）
 rem   绑定 0.0.0.0 由 profile 补丁层完成（~/.dsh/profiles/web/cordis.patch.yml），
 rem   本机用 http://127.0.0.1:端口 访问，手机用 http://局域网IP:端口 访问
 rem   在当前窗口运行 pnpm dsh web，并自动打开浏览器
@@ -20,15 +21,8 @@ if errorlevel 1 (
     exit /b 1
 )
 
-rem 端口已被占用：多半是已有 dsh web 实例在运行，直接打开浏览器访问它
-curl.exe -s -o nul --max-time 2 http://127.0.0.1:%PORT%
-if not errorlevel 1 (
-    echo [start] 端口 %PORT% 已有 dsh web 在运行，直接打开浏览器。
-    echo [start] 如需重启，请先关闭正在运行的 dsh web 窗口，再双击本脚本。
-    start "" http://127.0.0.1:%PORT%
-    pause
-    exit /b 0
-)
+rem 清理端口占用（僵留实例等）；无占用时静默跳过
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0clear-port.ps1" %PORT%
 
 rem 探测局域网 IP，仅用于展示手机访问地址
 set "LAN_IP="
