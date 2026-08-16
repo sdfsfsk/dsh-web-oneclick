@@ -9,7 +9,8 @@
 | 文件 | 作用 |
 | --- | --- |
 | `start.bat` | 一键启动 Web GUI：探测并显示局域网访问地址，自动打开浏览器，出错停在窗口不闪退 |
-| `update.bat` | 一键更新：探测本地代理 → `git pull --ff-only` → `pnpm install` → `pnpm run build` → 更新社区插件 → 更新 Mnemon CLI |
+| `start-tui.bat` | 一键启动终端 TUI（dsh-TUI 插件，Claude Code 风格全屏交互终端）：`start-tui.bat --resume` 恢复上次会话 |
+| `update.bat` | 一键更新：探测本地代理 → `git pull --ff-only` → `pnpm install` → `pnpm run build` → 更新社区插件（web 与 dsh-tui 两个 profile） → 更新 Mnemon CLI |
 | `update-mnemon.ps1` | Mnemon CLI 更新助手（查最新 release、SHA256 校验、解压安装），由 update.bat 调用 |
 | `get-lan-ip.ps1` | 局域网 IP 探测助手，由 start.bat 调用 |
 | `examples/cordis.patch.yml` | 局域网开放补丁（把 dsh web 绑定到 0.0.0.0），手机/平板访问的关键 |
@@ -25,7 +26,7 @@
 ## update.bat 细节
 
 - **代理**：默认探测本地 HTTP 代理 `127.0.0.1:10808` → `10809`（v2rayN 默认端口），也可以手动指定：`update.bat 7890`（Clash 默认端口）。代理环境变量只在脚本进程内生效。
-- **社区插件自动更新**：默认更新 `@linxin666/dsh-web-ui-all` 和 `dsh-mnemon`（见下方"社区插件"）。没装插件时这一步会报警告但不影响本体更新；装别的插件就自己改这一行。
+- **社区插件自动更新**：默认更新 web profile 的 `@linxin666/dsh-web-ui-all`、`dsh-mnemon` 和 dsh-tui profile 的 `@deepseek-harness-tui/dsh-tui`（见下方"社区插件"）。没装插件时这一步会报警告但不影响本体更新；装别的插件就自己改这两行。
 - **Mnemon CLI 自动更新**：仅当你的 web profile 装了 `dsh-mnemon` 记忆插件才有意义；CLI 本体装在 `%LOCALAPPDATA%\Programs\mnemon`。
 
 ## 局域网开放（手机访问）
@@ -61,7 +62,17 @@ pnpm dsh plugin --profile web add @linxin666/dsh-web-ui-all
 
 rem Mnemon 记忆系统（另外还需要装 Mnemon CLI 本体，见下）
 pnpm dsh plugin --profile web add dsh-mnemon
+
+rem dsh-TUI 终端界面（Claude Code 风格，装进独立的 dsh-tui profile）
+pnpm dsh plugin --profile dsh-tui add @deepseek-harness-tui/dsh-tui
 ```
+
+装完 dsh-TUI 后用 `start-tui.bat` 启动（等价于 `dsh --profile dsh-tui`），`--resume` 恢复上次会话。
+
+> ⚠️ **社区面板里的 dsh-TUI 安装命令用的是 GitHub 仓库地址，不要用**——该仓库的
+> `files` 字段不含 `scripts/`，git 安装方式会因 prepare 脚本缺失而构建失败。npm
+> 注册表包自带编译产物，请用上面的命令。若版本被 pnpm 11 年龄门禁拦住，把
+> `'@deepseek-harness-tui/dsh-tui'` 加进 dsh-tui profile 的 `minimumReleaseAgeExclude`。
 
 Mnemon CLI（Windows，插件自动发现该路径，无需配 PATH）：
 
@@ -80,12 +91,13 @@ Expand-Archive "$env:TEMP\mnemon.zip" -DestinationPath "$env:LOCALAPPDATA\Progra
 Windows 上 pnpm 是 `pnpm.CMD` 批处理包装器，bat 里调用必须加 `call`（如 `call pnpm install`），否则控制流不返回。
 
 **pnpm 11 装到的插件版本偏旧？**
-pnpm 11 的发布年龄门禁会静默隔离刚发布的版本。在 profile 的 `pnpm-workspace.yaml`（`%USERPROFILE%\.dsh\profiles\web\`）加：
+pnpm 11 的发布年龄门禁会静默隔离刚发布的版本。在对应 profile 的 `pnpm-workspace.yaml`（`%USERPROFILE%\.dsh\profiles\<profile>\`）加：
 
 ```yaml
 minimumReleaseAgeExclude:
   - '@linxin666/*'
   - 'dsh-mnemon'
+  - '@deepseek-harness-tui/dsh-tui'
 ```
 
 **cloudflared 隧道不可用 / 提示缺二进制？**

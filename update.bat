@@ -5,7 +5,8 @@ rem 一键更新 DeepSeek Harness + 社区插件 + Mnemon CLI（走 v2rayN 本地代理）：
 rem   1. 探测 v2rayN 本地 HTTP 代理端口（10808 -> 10809），也可显式传参
 rem   2. 设置 git / pnpm 的代理环境变量（仅本脚本进程内生效）
 rem   3. git pull --ff-only + pnpm install + pnpm run build
-rem   4. 更新 dsh-web-ui 与 dsh-mnemon 插件到最新版（失败只警告，不影响本体更新）
+rem   4. 更新社区插件：web profile（dsh-web-ui-all / dsh-mnemon）
+rem      与 dsh-tui profile（dsh-TUI）——失败只警告，不影响本体更新
 rem   5. 检查并更新 Mnemon CLI 到最新 release（update-mnemon.ps1，失败只警告）
 rem 用法: update.bat [代理端口]
 
@@ -48,8 +49,11 @@ call pnpm install || (pause & exit /b 1)
 echo [update] pnpm run build ...
 call pnpm run build || (pause & exit /b 1)
 
-echo [update] 更新社区插件（dsh-web-ui-all / dsh-mnemon）...
-call pnpm dsh plugin --profile web update --latest @linxin666/dsh-web-ui-all dsh-mnemon || echo [update] 插件更新失败，不影响本体更新结果，可稍后手动重试。
+echo [update] 更新社区插件（web: dsh-web-ui-all / dsh-mnemon）...
+call pnpm dsh plugin --profile web update --latest @linxin666/dsh-web-ui-all dsh-mnemon || echo [update] web 插件更新失败，不影响本体更新结果，可稍后手动重试。
+
+echo [update] 更新社区插件（dsh-tui: dsh-TUI）...
+call pnpm dsh plugin --profile dsh-tui update --latest @deepseek-harness-tui/dsh-tui || echo [update] dsh-TUI 更新失败，不影响其他更新结果，可稍后手动重试。
 
 echo [update] 检查 Mnemon CLI 更新...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0update-mnemon.ps1"
