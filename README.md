@@ -8,10 +8,9 @@
 
 | 文件 | 作用 |
 | --- | --- |
-| `install.bat` | 一键安装：走本地代理 `git clone` deepseek-harness 源码到当前目录 → 把一键脚本复制进仓库根目录 → `pnpm install` + `pnpm run build` |
 | `start.bat` | 一键启动 Web GUI：自动清理端口占用（僵留实例直接结束再启动，按端口动态解析 PID、不假定进程名），探测并显示局域网访问地址，自动打开浏览器 |
 | `start-tui.bat` | 一键启动终端 TUI（dsh-TUI 插件，Claude Code 风格全屏交互终端）：`start-tui.bat --resume` 恢复上次会话 |
-| `update.bat` | 一键更新：探测本地代理 → `git pull --ff-only` → `pnpm install` → `pnpm run build` → 更新社区插件（web 与 dsh-tui 两个 profile） → 更新 Mnemon CLI |
+| `update.bat` | 一键更新：探测本地代理 → `git pull --ff-only` → `pnpm install` → `pnpm run build` → 更新社区插件（web 与 dsh-tui 两个 profile） → 更新 Mnemon CLI。首次运行找不到 DSH 源码时自动转为安装：`git clone` → 复制一键脚本进仓库根目录 → 构建 |
 | `update-mnemon.ps1` | Mnemon CLI 更新助手（查最新 release、SHA256 校验、解压安装），由 update.bat 调用 |
 | `get-lan-ip.ps1` | 局域网 IP 探测助手，由 start.bat 调用 |
 | `link-skins.ps1` | 多 profile 皮肤兼容：把 web profile 的独立皮肤包 junction 进全局模块回退目录，修复 dsh-tui 等 profile 应用皮肤后无法启动的问题 |
@@ -20,16 +19,17 @@
 
 ## 快速开始
 
-1. 下载本仓库（ZIP 或 clone），双击 `install.bat`：自动探测本地代理（10808 → 10809，也可 `install.bat 7890` 手动指定），克隆 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) 源码到 `deepseek-harness/` 目录，复制一键脚本进仓库根目录，并完成 `pnpm install` + `pnpm run build`。
-2. 进入 `deepseek-harness/` 目录，双击 `start.bat` 启动；想更新时双击 `update.bat`。
+1. 下载本仓库（ZIP 或 clone），双击 `update.bat`：自动探测本地代理（10808 → 10809，也可 `update.bat 7890` 手动指定），首次运行会自动克隆 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) 源码到 `deepseek-harness/` 目录，复制一键脚本进仓库根目录，并完成 `pnpm install` + `pnpm run build`。
+2. 进入 `deepseek-harness/` 目录，双击 `start.bat` 启动；以后想更新时双击其中的 `update.bat`。
 
-已经按官方文档装好 DSH 源码环境（确认 `pnpm dsh web` 能正常启动）的，跳过 `install.bat`：把本仓库所有 `.bat` 和 `.ps1` 复制到 deepseek-harness **仓库根目录**（和 `package.json` 同级）即可。
+已经按官方文档装好 DSH 源码环境（确认 `pnpm dsh web` 能正常启动）的：把本仓库所有 `.bat` 和 `.ps1` 复制到 deepseek-harness **仓库根目录**（和 `package.json` 同级）即可，`update.bat` 会直接更新当前仓库。
 
 注意：批处理文件必须是 **GBK 编码 + CRLF 换行** 才能在中文 Windows 的 cmd 里正常工作（本仓库已按此分发，直接下载 ZIP 或 clone 即可；不要另存为 UTF-8，详见下方 FAQ）。
 
 ## update.bat 细节
 
-- **代理**：默认探测本地 HTTP 代理 `127.0.0.1:10808` → `10809`（v2rayN 默认端口），也可以手动指定：`update.bat 7890`（Clash 默认端口）。代理环境变量只在脚本进程内生效。`install.bat` 的代理探测逻辑与此相同。
+- **代理**：默认探测本地 HTTP 代理 `127.0.0.1:10808` → `10809`（v2rayN 默认端口），也可以手动指定：`update.bat 7890`（Clash 默认端口）。代理环境变量只在脚本进程内生效。
+- **首次运行自动安装**：当前目录不是 DSH 仓库、且 `deepseek-harness\` 子目录也没有源码时，`update.bat` 会自动 `git clone` 安装并构建（全新安装只构建本体，社区插件与 Mnemon 按下方说明另行安装）；已克隆过则自动进入 `deepseek-harness\` 目录执行更新。
 - **社区插件自动更新**：默认更新 web profile 的 `@linxin666/dsh-web-ui-all`、`dsh-mnemon` 和 dsh-tui profile 的 `@deepseek-harness-tui/dsh-tui`（见下方"社区插件"）。没装插件时这一步会报警告但不影响本体更新；装别的插件就自己改这两行。
 - **Mnemon CLI 自动更新**：仅当你的 web profile 装了 `dsh-mnemon` 记忆插件才有意义；CLI 本体装在 `%LOCALAPPDATA%\Programs\mnemon`。
 
