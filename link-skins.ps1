@@ -1,30 +1,51 @@
-﻿# link-skins.ps1 — 多 profile 皮肤兼容：把 web profile 里的独立皮肤包链接进
-# dsh 的全局模块回退目录，让 dsh-tui 等其他 profile 也能解析皮肤中心写入
-# 全局补丁层（~/.dsh/cordis.patch.yml）的皮肤包引用。
+# link-skins.ps1 — 旧版皮肤链接清理（历史脚本，保留用于善后）
 #
-# 背景：皮肤中心把"当前应用的独立皮肤"以包名写进全局补丁层，所有 profile
-# 启动时都会加载它；没装皮肤包的 profile（如 dsh-tui）会因
-# ERR_MODULE_NOT_FOUND 启动失败。把皮肤包直接装进那些 profile 又会被当作
-# bundle 挂载、与全局插入产生 duplicate loader entry id 冲突。
-# 启动器维护的 profiles/node_modules 回退目录只增不删（ stale link 不会被
-# 清理），把 junction 放进去即可一劳永逸：能解析、不挂载、不冲突。
+# 背景：dsh-web-ui 皮肤中心 v2 起，皮肤已全部内置进
+# @linxin666/dsh-client-ui-skin-center（纯资产目录），不再发布
+# dsh-client-ui-skin-* 独立皮肤包，也不再需要向其他 profile 做 junction。
+# 旧版（v1）留下的痕迹在升级后会直接拖垮启动：
+#   1. web profile node_modules 里的 dsh-client-ui-skin-* 符号链接指向
+#      已不存在的 dsh-skins/skins/* → ERR_MODULE_NOT_FOUND 启动崩溃；
+#   2. ~/.dsh/cordis.patch.yml 里的 "dsh-skin managed" 段引用这些死包名；
+#   3. profiles/node_modules 回退目录里指向它们的旧 junction。
+# 本脚本现在负责清理 1 和 3（死链接）；2 需手动处理：
+#   备份并编辑 ~/.dsh/cordis.patch.yml，删掉 "dsh-skin managed" 整段
+#  （新版皮肤中心首次启动会把当时的活动皮肤迁移进 v2 存储，之后该段无意义）。
 #
 # 用法：powershell -NoProfile -ExecutionPolicy Bypass -File link-skins.ps1
-# 皮肤包更新后无需重跑——junction 指向 web profile 的实时目录。
 
-$profiles = "$env:USERPROFILE\.dsh\profiles"
-$webModules = Join-Path $profiles 'web\node_modules\@linxin666'
-$fallback = Join-Path $profiles 'node_modules\@linxin666'
-New-Item -ItemType Directory -Force -Path $fallback | Out-Null
-$skins = Get-ChildItem $webModules -Directory -Filter 'dsh-client-ui-skin-*' -ErrorAction SilentlyContinue
-if (-not $skins) {
-    Write-Host 'web profile 里没找到独立皮肤包（dsh-client-ui-skin-*），无需处理。'
-    exit 0
+$base = "$env:USERPROFILE\.dsh\profiles"
+$dirs = @(
+    (Join-Path $base 'web\node_modules\@linxin666'),
+    (Join-Path $base 'node_modules\@linxin666')
+)
+
+$removed = 0
+foreach ($dir in $dirs) {
+    if (-not (Test-Path $dir)) { continue }
+    Get-ChildItem $dir -Force -Filter 'dsh-client-ui-skin-*' | ForEach-Object {
+        $item = $_
+        if (-not $item.LinkType) { return }  # 真目录不动
+        $target = $item.Target
+        $targetDead = ($null -eq $target) -or ($target | Where-Object { -not (Test-Path $_) })
+        if ($targetDead) {
+            Remove-Item $item.FullName -Force
+            Write-Host ("已删除死链接: {0} -> {1}" -f $item.Name, ($target -join ', '))
+            $removed++
+        } else {
+            Write-Host ("保留活链接: {0} -> {1}" -f $item.Name, ($target -join ', '))
+        }
+    }
 }
-foreach ($skin in $skins) {
-    $link = Join-Path $fallback $skin.Name
-    if (Test-Path $link) { Remove-Item $link -Force -Recurse }
-    New-Item -ItemType Junction -Path $link -Target $skin.FullName | Out-Null
-    Write-Host "已链接 $($skin.Name)"
+
+if ($removed -eq 0) {
+    Write-Host '没有发现旧版皮肤死链接，无需处理。'
+} else {
+    Write-Host "共清理 $removed 个死链接。"
 }
-Write-Host '完成。其他 profile 现在也能解析这些皮肤包了。'
+
+# 顺带检查全局补丁层是否还残留旧版皮肤段
+$globalPatch = "$env:USERPROFILE\.dsh\cordis.patch.yml"
+if ((Test-Path $globalPatch) -and (Select-String -Path $globalPatch -Pattern 'dsh-skin managed' -Quiet)) {
+    Write-Host "警告: $globalPatch 仍包含旧版 'dsh-skin managed' 段，请备份后删除该段（仅删该段，保留其他补丁项）。"
+}

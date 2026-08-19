@@ -13,7 +13,7 @@
 | `update.bat` | 一键更新：探测本地代理 → `git pull --ff-only` → `pnpm install` → `pnpm run build` → 更新社区插件（web 与 dsh-tui 两个 profile） → 更新 Mnemon CLI。首次运行找不到 DSH 源码时自动转为安装：`git clone` → 复制一键脚本进仓库根目录 → 构建 |
 | `update-mnemon.ps1` | Mnemon CLI 更新助手（查最新 release、SHA256 校验、解压安装），由 update.bat 调用 |
 | `get-lan-ip.ps1` | 局域网 IP 探测助手，由 start.bat 调用 |
-| `link-skins.ps1` | 多 profile 皮肤兼容：把 web profile 的独立皮肤包 junction 进全局模块回退目录，修复 dsh-tui 等 profile 应用皮肤后无法启动的问题 |
+| `link-skins.ps1` | 旧版皮肤链接清理（善后工具）：皮肤中心 v2 起皮肤已内置进 skin-center 包，旧版遗留的 `dsh-client-ui-skin-*` 死链接会导致 `ERR_MODULE_NOT_FOUND` 启动崩溃，本脚本扫描并删除这些死链接 |
 | `clear-port.ps1` | 端口清理助手，由 start.bat 调用：结束占用启动端口的监听进程并确认释放（按端口动态解析 PID，不假定进程名） |
 | `examples/cordis.patch.yml` | 局域网开放补丁（把 dsh web 绑定到 0.0.0.0），手机/平板访问的关键 |
 
@@ -120,8 +120,12 @@ allowBuilds:
 **端口被占用 / 重复启动报 EADDRINUSE？**
 不需要手动处理：`start.bat` 启动前会调用 `clear-port.ps1` 自动结束占用端口的监听进程（僵留的 dsh web 实例等），再全新启动。清理是按端口动态解析 PID 的，不假定任何进程名。
 
-**dsh-tui 等其他 profile 报 ERR_MODULE_NOT_FOUND / Cannot find package '@linxin666/dsh-client-ui-skin-xxx'？**
-皮肤中心把"当前应用的独立皮肤"以包名写进**全局**补丁层（`%USERPROFILE%\.dsh\cordis.patch.yml`），所有 profile 启动时都会加载它；没装皮肤包的 profile 就会启动失败。注意不要把皮肤包直接装进那些 profile——它们会被当作 bundle 挂载，与全局插入产生 `duplicate loader entry id` 冲突。正确解法是跑一遍 `link-skins.ps1`：把皮肤包以 junction 形式放进启动器的全局模块回退目录（`profiles/node_modules`），能解析、不挂载、不冲突，且皮肤更新后无需重跑。
+**报 ERR_MODULE_NOT_FOUND / Cannot find package '@linxin666/dsh-client-ui-skin-xxx'，dsh web 直接起不来？**
+这是皮肤中心 v1 → v2 升级遗留问题：v2 起皮肤已全部内置进 `@linxin666/dsh-client-ui-skin-center`（纯资产目录，不再有独立皮肤包），而旧版留下的两类痕迹会拖垮启动图——
+1. profile `node_modules` 里的 `dsh-client-ui-skin-*` 符号链接指向已不存在的 `dsh-skins/skins/*`（死链）；
+2. 全局补丁层 `%USERPROFILE%\.dsh\cordis.patch.yml` 里的 `dsh-skin managed` 段仍引用这些死包名。
+
+修复：先跑一遍 `link-skins.ps1` 删除全部死链接，再备份并编辑 `%USERPROFILE%\.dsh\cordis.patch.yml`，把 `# --- dsh-skin managed ... # --- end dsh-skin managed ---` 整段删掉（没有其他补丁项的话整个文件写成 `[]`）。重启后新版皮肤中心会在 设置 → 皮肤中心 里提供全部内置皮肤，重新应用即可；新机制不再改写补丁层、不再需要 junction，其他 profile 也不会再受影响。
 
 ## 许可证
 
