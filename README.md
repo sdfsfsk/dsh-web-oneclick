@@ -8,9 +8,9 @@
 
 | 文件 | 作用 |
 | --- | --- |
-| `start.bat` | 一键启动 Web GUI：自动清理端口占用（僵留实例直接结束再启动，按端口动态解析 PID、不假定进程名），探测并显示局域网访问地址，自动打开浏览器 |
-| `start-tui.bat` | 一键启动终端 TUI（dsh-TUI 插件，Claude Code 风格全屏交互终端）：`start-tui.bat --resume` 恢复上次会话 |
-| `update.bat` | 一键更新：探测本地代理 → `git pull --ff-only` → `pnpm install` → `pnpm run build` → 更新社区插件（web 与 dsh-tui 两个 profile） → 更新 Mnemon CLI。首次运行找不到 DSH 源码时自动转为安装：`git clone` → 复制一键脚本进仓库根目录 → 构建 |
+| `start.bat` | 一键启动 Web GUI：自动清理端口占用（僵留实例直接结束再启动，按端口动态解析 PID、不假定进程名），探测本地代理并让 Node 全局 fetch 走代理（dsh-codex 等境外插件需要），探测并显示局域网访问地址，自动打开浏览器 |
+| `start-tui.bat` | 一键启动终端 TUI（dsh-TUI 插件，Claude Code 风格全屏交互终端）：`start-tui.bat --resume` 恢复上次会话；同样自动接入本地代理 |
+| `update.bat` | 一键更新：探测本地代理 → `git pull --ff-only` → `pnpm install` → `pnpm run build` → 更新社区插件（web 与 dsh-tui 两个 profile，含 dsh-codex） → 更新 Mnemon CLI。首次运行找不到 DSH 源码时自动转为安装：`git clone` → 复制一键脚本进仓库根目录 → 构建 |
 | `update-mnemon.ps1` | Mnemon CLI 更新助手（查最新 release、SHA256 校验、解压安装），由 update.bat 调用 |
 | `get-lan-ip.ps1` | 局域网 IP 探测助手，由 start.bat 调用 |
 | `link-skins.ps1` | 旧版皮肤链接清理（善后工具）：皮肤中心 v2 起皮肤已内置进 skin-center 包，旧版遗留的 `dsh-client-ui-skin-*` 死链接会导致 `ERR_MODULE_NOT_FOUND` 启动崩溃，本脚本扫描并删除这些死链接 |
@@ -69,6 +69,9 @@ pnpm dsh plugin --profile web add dsh-mnemon
 
 rem dsh-TUI 终端界面（Claude Code 风格，装进独立的 dsh-tui profile）
 pnpm dsh plugin --profile dsh-tui add @deepseek-harness-tui/dsh-tui
+
+rem dsh-codex（ChatGPT 订阅登录用 Codex 模型，无需 OpenAI API key；境外服务，需代理，见下）
+pnpm dsh plugin --profile web add dsh-codex
 ```
 
 装完 dsh-TUI 后用 `start-tui.bat` 启动（等价于 `dsh --profile dsh-tui`），`--resume` 恢复上次会话。
@@ -126,6 +129,9 @@ allowBuilds:
 2. 全局补丁层 `%USERPROFILE%\.dsh\cordis.patch.yml` 里的 `dsh-skin managed` 段仍引用这些死包名。
 
 修复：先跑一遍 `link-skins.ps1` 删除全部死链接，再备份并编辑 `%USERPROFILE%\.dsh\cordis.patch.yml`，把 `# --- dsh-skin managed ... # --- end dsh-skin managed ---` 整段删掉（没有其他补丁项的话整个文件写成 `[]`）。重启后新版皮肤中心会在 设置 → 皮肤中心 里提供全部内置皮肤，重新应用即可；新机制不再改写补丁层、不再需要 junction，其他 profile 也不会再受影响。
+
+**dsh-codex 连不上 / 登录转圈 / 模型请求失败？**
+dsh-codex 走的是 ChatGPT 后端（境外服务），而插件和 pi-ai 都裸用 Node 全局 `fetch()`，**不读** `HTTP(S)_PROXY` 环境变量。解法已内置进 `start.bat` / `start-tui.bat`：利用 Node 24.5+ 的 `NODE_USE_ENV_PROXY=1` 让内置 undici fetch 遵循代理环境变量，脚本会自动探测 `127.0.0.1:10808 → 10809` 并设置，同时用 `NO_PROXY=localhost,127.0.0.1,api.deepseek.com` 把回环和 DeepSeek API 排除在代理之外。代理不在默认端口时先 `set DSH_PROXY=http://127.0.0.1:7890` 再运行脚本。两个注意点：Node 版本需 ≥ 24.5（`node -v` 确认）；在 dsh 设置面板里登录即可（面板运行在已被脚本注入代理环境的 dsh web 进程里），若要用 `dsh plugin exec dsh-openai-codex login` 命令行登录，需先手动 `set NODE_USE_ENV_PROXY=1` 和 `set HTTPS_PROXY=...`。
 
 ## 许可证
 
