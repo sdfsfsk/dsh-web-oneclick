@@ -10,7 +10,8 @@
 | --- | --- |
 | `start.bat` | 一键启动 Web GUI：自动清理端口占用（僵留实例直接结束再启动，按端口动态解析 PID、不假定进程名），探测本地代理并让 Node 全局 fetch 走代理（dsh-codex 等境外插件需要），探测并显示局域网访问地址，自动打开浏览器 |
 | `start-tui.bat` | 一键启动终端 TUI（dsh-TUI 插件，Claude Code 风格全屏交互终端）：`start-tui.bat --resume` 恢复上次会话；同样自动接入本地代理 |
-| `update.bat` | 一键更新：探测本地代理 → `git pull --ff-only` → `pnpm install` → `pnpm run build` → 更新社区插件（web 与 dsh-tui 两个 profile，含 dsh-codex） → 更新 Mnemon CLI。首次运行找不到 DSH 源码时自动转为安装：`git clone` → 复制一键脚本进仓库根目录 → 构建 |
+| `update.bat` | 一键更新：探测本地代理 → `git pull --ff-only` → `pnpm install` → `pnpm run build` → 更新社区插件（web 与 dsh-tui 两个 profile，含 dsh-codex、dsh-reasoning-effort） → 更新 Mnemon CLI。首次运行找不到 DSH 源码时自动转为安装：`git clone` → 复制一键脚本进仓库根目录 → 构建 |
+| `login-codex.bat` | 一键令牌登录 dsh-codex（设备码方式）：自动探测本地代理并注入 `NODE_USE_ENV_PROXY`，先检查登录状态（已登录且凭据有效则直接退出，不重复授权），未登录时终端显示授权网址和码，浏览器打开输入即可。登录前需把梯子切到**全局代理**模式，登录成功后可切回 |
 | `update-mnemon.ps1` | Mnemon CLI 更新助手（查最新 release、SHA256 校验、解压安装），由 update.bat 调用 |
 | `get-lan-ip.ps1` | 局域网 IP 探测助手，由 start.bat 调用 |
 | `link-skins.ps1` | 旧版皮肤链接清理（善后工具）：皮肤中心 v2 起皮肤已内置进 skin-center 包，旧版遗留的 `dsh-client-ui-skin-*` 死链接会导致 `ERR_MODULE_NOT_FOUND` 启动崩溃，本脚本扫描并删除这些死链接 |
@@ -72,6 +73,10 @@ pnpm dsh plugin --profile dsh-tui add @deepseek-harness-tui/dsh-tui
 
 rem dsh-codex（ChatGPT 订阅登录用 Codex 模型，无需 OpenAI API key；境外服务，需代理，见下）
 pnpm dsh plugin --profile web add dsh-codex
+
+rem dsh-reasoning-effort（输入框下方的推理强度滑块 + 模型入口；git 源，仓库自带编译产物，
+rem pnpm 拦构建脚本不影响；未发 npm，只能用 github: 地址装）
+pnpm dsh plugin --profile web add github:HanaAyane/dsh-reasoning-effort#main
 ```
 
 装完 dsh-TUI 后用 `start-tui.bat` 启动（等价于 `dsh --profile dsh-tui`），`--resume` 恢复上次会话。
@@ -130,7 +135,10 @@ allowBuilds:
 
 修复：先跑一遍 `link-skins.ps1` 删除全部死链接，再备份并编辑 `%USERPROFILE%\.dsh\cordis.patch.yml`，把 `# --- dsh-skin managed ... # --- end dsh-skin managed ---` 整段删掉（没有其他补丁项的话整个文件写成 `[]`）。重启后新版皮肤中心会在 设置 → 皮肤中心 里提供全部内置皮肤，重新应用即可；新机制不再改写补丁层、不再需要 junction，其他 profile 也不会再受影响。
 
-**dsh-codex 连不上 / 登录转圈 / 模型请求失败？**
+**dsh-codex 怎么登录？**
+双击 `login-codex.bat`（设备码方式，最稳）：终端会显示一个授权网址和一串码，浏览器打开网址输入码即可。**登录前请先把梯子（v2rayN 等）切到"全局代理"模式**——授权页 `auth.openai.com` 走 Cloudflare，"绕过大陆"类规则会把它误判为直连，用大陆 IP 访问会报 `unsupported_country_region_territory`。**网页显示登录成功后就可以切回普通模式了**：凭据已落盘（`~/.dsh/.openai-codex-auth.json`，token 自动刷新），浏览器不再参与；之后日常使用只要梯子应用保持运行，`start.bat` / `start-tui.bat` 会自动把本地代理注入 dsh 进程，无需全局模式。注意不要在 dsh web 设置面板里点"使用 ChatGPT 登录"——那条浏览器回调路径（localhost:1455）在部分环境下接不住回调，设备码方式没有这个问题。
+
+**dsh-codex 连不上 / 模型请求失败？**
 dsh-codex 走的是 ChatGPT 后端（境外服务），而插件和 pi-ai 都裸用 Node 全局 `fetch()`，**不读** `HTTP(S)_PROXY` 环境变量。解法已内置进 `start.bat` / `start-tui.bat`：利用 Node 24.5+ 的 `NODE_USE_ENV_PROXY=1` 让内置 undici fetch 遵循代理环境变量，脚本会自动探测 `127.0.0.1:10808 → 10809` 并设置，同时用 `NO_PROXY=localhost,127.0.0.1,api.deepseek.com` 把回环和 DeepSeek API 排除在代理之外。代理不在默认端口时先 `set DSH_PROXY=http://127.0.0.1:7890` 再运行脚本。两个注意点：Node 版本需 ≥ 24.5（`node -v` 确认）；在 dsh 设置面板里登录即可（面板运行在已被脚本注入代理环境的 dsh web 进程里），若要用 `dsh plugin exec dsh-openai-codex login` 命令行登录，需先手动 `set NODE_USE_ENV_PROXY=1` 和 `set HTTPS_PROXY=...`。
 
 ## 许可证
