@@ -84,8 +84,11 @@ if "%FRESH%"=="1" (
     exit /b 0
 )
 
-echo [update] 更新社区插件（web: dsh-web-ui-all / dsh-mnemon / dsh-codex）...
-call pnpm dsh plugin --profile web update --latest @linxin666/dsh-web-ui-all dsh-mnemon dsh-codex || echo [update] web 插件更新失败，不影响本体更新结果，可稍后手动重试。
+echo [update] 更新社区插件（web: dsh-web-ui-all / dsh-mnemon）...
+call pnpm dsh plugin --profile web update --latest @linxin666/dsh-web-ui-all dsh-mnemon || echo [update] web 插件更新失败，不影响本体更新结果，可稍后手动重试。
+
+echo [update] 更新 dsh-codex（保留 link/file/git 本地补丁来源）...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0update-codex.ps1" || echo [update] dsh-codex 更新失败，不影响本体更新结果，可稍后手动重试。
 
 echo [update] 更新社区插件（web: dsh-reasoning-effort，git 源）...
 call pnpm dsh plugin --profile web add github:HanaAyane/dsh-reasoning-effort#main || echo [update] dsh-reasoning-effort 更新失败，不影响其他更新结果，可稍后手动重试。

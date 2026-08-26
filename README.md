@@ -12,6 +12,7 @@
 | `start-tui.bat` | 一键启动终端 TUI（dsh-TUI 插件，Claude Code 风格全屏交互终端）：`start-tui.bat --resume` 恢复上次会话；同样自动接入本地代理 |
 | `update.bat` | 一键更新：探测本地代理 → `git pull --ff-only` → `pnpm install` → `pnpm run build` → 更新社区插件（web 与 dsh-tui 两个 profile，含 dsh-codex、dsh-reasoning-effort） → 更新 Mnemon CLI。首次运行找不到 DSH 源码时自动转为安装：`git clone` → 复制一键脚本进仓库根目录 → 构建 |
 | `login-codex.bat` | 一键令牌登录 dsh-codex（设备码方式）：自动探测本地代理并注入 `NODE_USE_ENV_PROXY`，先检查登录状态（已登录且凭据有效则直接退出，不重复授权），未登录时终端显示授权网址和码，浏览器打开输入即可。登录前需把梯子切到**全局代理**模式，登录成功后可切回 |
+| `update-codex.ps1` | dsh-codex 更新助手：npm 安装正常更新；检测到 `link:`、`file:` 或 Git 来源时保留本地补丁，不覆盖开发 checkout |
 | `update-mnemon.ps1` | Mnemon CLI 更新助手（查最新 release、SHA256 校验、解压安装），由 update.bat 调用 |
 | `get-lan-ip.ps1` | 局域网 IP 探测助手，由 start.bat 调用 |
 | `link-skins.ps1` | 旧版皮肤链接清理（善后工具）：皮肤中心 v2 起皮肤已内置进 skin-center 包，旧版遗留的 `dsh-client-ui-skin-*` 死链接会导致 `ERR_MODULE_NOT_FOUND` 启动崩溃，本脚本扫描并删除这些死链接 |
@@ -31,7 +32,7 @@
 
 - **代理**：默认探测本地 HTTP 代理 `127.0.0.1:10808` → `10809`（v2rayN 默认端口），也可以手动指定：`update.bat 7890`（Clash 默认端口）。代理环境变量只在脚本进程内生效。
 - **首次运行自动安装**：当前目录不是 DSH 仓库、且 `deepseek-harness\` 子目录也没有源码时，`update.bat` 会自动 `git clone` 安装并构建（全新安装只构建本体，社区插件与 Mnemon 按下方说明另行安装）；已克隆过则自动进入 `deepseek-harness\` 目录执行更新。
-- **社区插件自动更新**：默认更新 web profile 的 `@linxin666/dsh-web-ui-all`、`dsh-mnemon` 和 dsh-tui profile 的 `@deepseek-harness-tui/dsh-tui`（见下方"社区插件"）。没装插件时这一步会报警告但不影响本体更新；装别的插件就自己改这两行。
+- **社区插件自动更新**：默认更新 web profile 的 `@linxin666/dsh-web-ui-all`、`dsh-mnemon`、`dsh-codex` 和 dsh-tui profile 的 `@deepseek-harness-tui/dsh-tui`（见下方“社区插件”）。`dsh-codex` 若使用 `link:`、`file:` 或 Git 来源，脚本会保留该本地／开发补丁，不会改回 npm；没装插件时这一步会报警告但不影响本体更新。
 - **Mnemon CLI 自动更新**：仅当你的 web profile 装了 `dsh-mnemon` 记忆插件才有意义；CLI 本体装在 `%LOCALAPPDATA%\Programs\mnemon`。
 
 ## 局域网开放（手机访问）
@@ -78,6 +79,14 @@ rem dsh-reasoning-effort（输入框下方的推理强度滑块 + 模型入口�
 rem pnpm 拦构建脚本不影响；未发 npm，只能用 github: 地址装）
 pnpm dsh plugin --profile web add github:HanaAyane/dsh-reasoning-effort#main
 ```
+
+本地开发／补丁版 `dsh-codex` 可先在插件 checkout 中运行 `pnpm install && pnpm run build`，再安装链接：
+
+```bat
+pnpm dsh plugin --profile web add link:H:\path\to\dsh-codex
+```
+
+此后 `update.bat` 会识别 profile 中的非 npm 来源并保留该链接；要恢复 npm 正式版，执行 `pnpm dsh plugin --profile web add dsh-codex`。
 
 装完 dsh-TUI 后用 `start-tui.bat` 启动（等价于 `dsh --profile dsh-tui`），`--resume` 恢复上次会话。
 
