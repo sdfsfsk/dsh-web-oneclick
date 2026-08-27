@@ -8,7 +8,8 @@
 
 | 文件 | 作用 |
 | --- | --- |
-| `start.bat` | 一键启动 Web GUI：自动清理端口占用（僵留实例直接结束再启动，按端口动态解析 PID、不假定进程名），探测本地代理并让 Node 全局 fetch 走代理（dsh-codex 等境外插件需要），探测并显示局域网访问地址，自动打开浏览器 |
+| `start.bat` | 一键启动 Web GUI：自动清理端口占用（僵留实例直接结束再启动，按端口动态解析 PID、不假定进程名），探测本地代理并让 Node 全局 fetch 走代理（dsh-codex 等境外插件需要），探测并显示局域网访问地址，自动打开浏览器，同时把控制台输出持久化到 `%LOCALAPPDATA%\DeepSeekHarness\logs` |
+| `start-web.ps1` | Web 启动与日志助手：控制台和 UTF-8 日志双写，记录启动/退出时间与退出码，维护 `dsh-web-latest.txt` 并保留最近 20 份日志 |
 | `start-tui.bat` | 一键启动终端 TUI（dsh-TUI 插件，Claude Code 风格全屏交互终端）：`start-tui.bat --resume` 恢复上次会话；同样自动接入本地代理 |
 | `update.bat` | 一键更新：探测本地代理 → `git pull --ff-only` → `pnpm install` → `pnpm run build` → 更新社区插件（web 与 dsh-tui 两个 profile，含 dsh-codex、dsh-reasoning-effort） → 更新 Mnemon CLI。首次运行找不到 DSH 源码时自动转为安装：`git clone` → 复制一键脚本进仓库根目录 → 构建 |
 | `login-codex.bat` | 一键令牌登录 dsh-codex（设备码方式）：自动探测本地代理并注入 `NODE_USE_ENV_PROXY`，先检查登录状态（已登录且凭据有效则直接退出，不重复授权），未登录时终端显示授权网址和码，浏览器打开输入即可。登录前需把梯子切到**全局代理**模式，登录成功后可切回 |
@@ -25,6 +26,8 @@
 2. 进入 `deepseek-harness/` 目录，双击 `start.bat` 启动；以后想更新时双击其中的 `update.bat`。
 
 已经按官方文档装好 DSH 源码环境（确认 `pnpm dsh web` 能正常启动）的：把本仓库所有 `.bat` 和 `.ps1` 复制到 deepseek-harness **仓库根目录**（和 `package.json` 同级）即可，`update.bat` 会直接更新当前仓库。
+
+每次通过 `start.bat` 启动都会在 `%LOCALAPPDATA%\DeepSeekHarness\logs` 创建 `dsh-web-YYYYMMDD-HHmmss.log`，`dsh-web-latest.txt` 指向最近一份；最多保留 20 份。日志可能包含本机路径、错误详情和插件输出，不要直接公开分享完整文件。
 
 注意：批处理文件必须是 **GBK 编码 + CRLF 换行** 才能在中文 Windows 的 cmd 里正常工作（本仓库已按此分发，直接下载 ZIP 或 clone 即可；不要另存为 UTF-8，详见下方 FAQ）。
 
@@ -104,6 +107,9 @@ Expand-Archive "$env:TEMP\mnemon.zip" -DestinationPath "$env:LOCALAPPDATA\Progra
 ```
 
 ## 排障 FAQ
+
+**DSH 突然退出，日志在哪里？**
+通过 `start.bat` 启动时看 `%LOCALAPPDATA%\DeepSeekHarness\logs\dsh-web-latest.txt`，再打开它指向的 `.log`。日志尾部正常会有 `[stop] ... exitCode=...`；若该行缺失，通常表示启动窗口、PowerShell wrapper 或整台机器被强制结束。Windows 原生崩溃还可检查事件查看器和 `%LOCALAPPDATA%\CrashDumps`。
 
 **双击 bat 闪退/报一堆"不是内部或外部命令"？**
 文件编码或换行被改了。cmd 需要 GBK 编码 + CRLF 换行；UTF-8 的中文会在 GBK 控制台里乱码并吃掉相邻引号，LF 换行会让 `if (...)` 多行块和 `goto` 标签解析错乱。用本仓库原始分发的文件，不要用编辑器"另存为 UTF-8"。
