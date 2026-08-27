@@ -18,6 +18,7 @@
 | `get-lan-ip.ps1` | 局域网 IP 探测助手，由 start.bat 调用 |
 | `link-skins.ps1` | 旧版皮肤链接清理（善后工具）：皮肤中心 v2 起皮肤已内置进 skin-center 包，旧版遗留的 `dsh-client-ui-skin-*` 死链接会导致 `ERR_MODULE_NOT_FOUND` 启动崩溃，本脚本扫描并删除这些死链接 |
 | `clear-port.ps1` | 端口清理助手，由 start.bat 调用：结束占用启动端口的监听进程并确认释放（按端口动态解析 PID，不假定进程名） |
+| `fix-node-pty-attach-console.ps1` | Windows `node-pty@1.1.0` 兼容修补：ConPTY 清理无法 `AttachConsole` 时回退到 shell PID，避免辅助子进程未捕获异常；每次启动幂等检查，插件更新覆盖后会自动重补 |
 | `examples/cordis.patch.yml` | 局域网开放补丁（把 dsh web 绑定到 0.0.0.0），手机/平板访问的关键 |
 
 ## 快速开始
@@ -110,6 +111,9 @@ Expand-Archive "$env:TEMP\mnemon.zip" -DestinationPath "$env:LOCALAPPDATA\Progra
 
 **DSH 突然退出，日志在哪里？**
 通过 `start.bat` 启动时看 `%LOCALAPPDATA%\DeepSeekHarness\logs\dsh-web-latest.txt`，再打开它指向的 `.log`。日志尾部正常会有 `[stop] ... exitCode=...`；若该行缺失，通常表示启动窗口、PowerShell wrapper 或整台机器被强制结束。Windows 原生崩溃还可检查事件查看器和 `%LOCALAPPDATA%\CrashDumps`。
+
+**日志出现 `node-pty` / `AttachConsole failed`？**
+这是 `node-pty@1.1.0` 在 Windows 清理 ConPTY 进程树时的已知问题（见 [DSH-better-sidebar #140](https://github.com/omdsh-dev/DSH-better-sidebar/issues/140)）：辅助子进程附加不到伪控制台时会抛出未捕获异常。`start.bat` 会在每次启动前幂等修补 `lib` 与 `src` agent，让失败降级为仅清理 shell PID；社区插件更新覆盖 `node_modules` 后，下次启动会自动重新应用。
 
 **双击 bat 闪退/报一堆"不是内部或外部命令"？**
 文件编码或换行被改了。cmd 需要 GBK 编码 + CRLF 换行；UTF-8 的中文会在 GBK 控制台里乱码并吃掉相邻引号，LF 换行会让 `if (...)` 多行块和 `goto` 标签解析错乱。用本仓库原始分发的文件，不要用编辑器"另存为 UTF-8"。

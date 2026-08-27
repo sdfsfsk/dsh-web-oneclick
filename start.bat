@@ -25,6 +25,9 @@ if errorlevel 1 (
 rem 清理端口占用（僵留实例等）；无占用时静默跳过
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0clear-port.ps1" %PORT%
 
+rem node-pty 1.1.0 在 Windows ConPTY 清理时可能 AttachConsole 失败；启动前幂等加入安全回退
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0fix-node-pty-attach-console.ps1" || echo [start] node-pty 兼容补丁失败，终端关闭时可能出现 AttachConsole 错误。
+
 rem 让 Node 全局 fetch 走本地代理：dsh-codex 等插件直接裸用 fetch()，不读
 rem HTTP(S)_PROXY；Node 24.5+ 的 NODE_USE_ENV_PROXY 使内置 undici fetch 遵循
 rem 代理环境变量。NO_PROXY 排除回环与 DeepSeek API，避免国内服务被绕到境外。
