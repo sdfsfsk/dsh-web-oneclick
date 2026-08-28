@@ -11,9 +11,10 @@
 | `start.bat` | 一键启动 Web GUI：自动清理端口占用（僵留实例直接结束再启动，按端口动态解析 PID、不假定进程名），探测本地代理并让 Node 全局 fetch 走代理（dsh-codex 等境外插件需要），探测并显示局域网访问地址，自动打开浏览器，同时把控制台输出持久化到 `%LOCALAPPDATA%\DeepSeekHarness\logs` |
 | `start-web.ps1` | Web 启动与日志助手：控制台和 UTF-8 日志双写，记录启动/退出时间与退出码，维护 `dsh-web-latest.txt` 并保留最近 20 份日志 |
 | `start-tui.bat` | 一键启动终端 TUI（dsh-TUI 插件，Claude Code 风格全屏交互终端）：`start-tui.bat --resume` 恢复上次会话；同样自动接入本地代理 |
-| `update.bat` | 一键更新：探测本地代理 → `git pull --ff-only` → `pnpm install` → `pnpm run build` → 更新社区插件（web 与 dsh-tui 两个 profile，含 dsh-codex、dsh-reasoning-effort） → 更新 Mnemon CLI。首次运行找不到 DSH 源码时自动转为安装：`git clone` → 复制一键脚本进仓库根目录 → 构建 |
+| `update.bat` | 一键更新：探测本地代理 → 切换到兼容的 DSH 标签 → `pnpm install` → 清理并构建 → 更新社区插件（web 与 dsh-tui 两个 profile，含 dsh-codex、dsh-reasoning-effort） → 更新 Mnemon CLI。首次运行找不到 DSH 源码时自动转为安装：`git clone` → 复制一键脚本进仓库根目录 → 构建 |
 | `login-codex.bat` | 一键令牌登录 dsh-codex（设备码方式）：自动探测本地代理并注入 `NODE_USE_ENV_PROXY`，先检查登录状态（已登录且凭据有效则直接退出，不重复授权），未登录时终端显示授权网址和码，浏览器打开输入即可。登录前需把梯子切到**全局代理**模式，登录成功后可切回 |
 | `update-codex.ps1` | dsh-codex 更新助手：npm 安装正常更新；检测到 `link:`、`file:` 或 Git 来源时保留本地补丁，不覆盖开发 checkout |
+| `update-profile-policies.ps1` | profile 供应链策略助手：只为脚本明确更新的社区插件及其 `@morlay/*` 依赖添加发布时间门禁排除项，保留其他未知包的 pnpm 保护 |
 | `update-mnemon.ps1` | Mnemon CLI 更新助手（查最新 release、SHA256 校验、解压安装），由 update.bat 调用 |
 | `get-lan-ip.ps1` | 局域网 IP 探测助手，由 start.bat 调用 |
 | `link-skins.ps1` | 旧版皮肤链接清理（善后工具）：皮肤中心 v2 起皮肤已内置进 skin-center 包，旧版遗留的 `dsh-client-ui-skin-*` 死链接会导致 `ERR_MODULE_NOT_FOUND` 启动崩溃，本脚本扫描并删除这些死链接 |
@@ -121,13 +122,15 @@ Expand-Archive "$env:TEMP\mnemon.zip" -DestinationPath "$env:LOCALAPPDATA\Progra
 **bat 里调用 pnpm 后脚本直接结束？**
 Windows 上 pnpm 是 `pnpm.CMD` 批处理包装器，bat 里调用必须加 `call`（如 `call pnpm install`），否则控制流不返回。
 
-**pnpm 11 装到的插件版本偏旧？**
-pnpm 11 的发布年龄门禁会静默隔离刚发布的版本。在对应 profile 的 `pnpm-workspace.yaml`（`%USERPROFILE%\.dsh\profiles\<profile>\`）加：
+**pnpm 11 报 `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`？**
+`update.bat` 会调用 `update-profile-policies.ps1`，仅为它明确维护的社区插件作用域配置发布时间门禁排除项；其他未知包仍受保护。手动维护 profile 时，可在对应 `pnpm-workspace.yaml`（`%USERPROFILE%\.dsh\profiles\<profile>\`）加入：
 
 ```yaml
 minimumReleaseAgeExclude:
   - '@linxin666/*'
+  - '@morlay/*'
   - 'dsh-mnemon'
+  - 'dsh-codex'
   - '@deepseek-harness-tui/dsh-tui'
 ```
 

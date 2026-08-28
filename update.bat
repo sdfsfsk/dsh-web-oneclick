@@ -103,6 +103,14 @@ if "%FRESH%"=="1" (
     exit /b 0
 )
 
+echo [update] 配置 profile 的受信任插件供应链策略...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%update-profile-policies.ps1"
+if errorlevel 1 (
+    echo [update] profile 供应链策略配置失败，已停止社区插件更新。
+    pause
+    exit /b 1
+)
+
 echo [update] 更新社区插件（web: dsh-web-ui-all / dsh-mnemon）...
 call pnpm dsh plugin --profile web update --latest @linxin666/dsh-web-ui-all dsh-mnemon || echo [update] web 插件更新失败，不影响本体更新结果，可稍后手动重试。
 
