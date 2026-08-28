@@ -1,5 +1,6 @@
 @echo off
 setlocal
+set "SCRIPT_DIR=%~dp0"
 
 rem 一键令牌登录 dsh-codex（设备码方式，自动走本地代理）：
 rem   自动探测本地代理（127.0.0.1:10808 -> 10809，或先 set DSH_PROXY=http://127.0.0.1:7890
@@ -17,7 +18,13 @@ rem      代理注入 dsh 进程，浏览器不再参与）。
 rem
 rem 用法: login-codex.bat        （在 deepseek-harness 仓库根目录双击）
 
-cd /d "%~dp0"
+call :locate_repo
+if errorlevel 1 (
+    echo [login] 未找到 DeepSeek Harness 源码。
+    echo [login] 请先双击 update.bat 完成安装，或把本脚本放到 DSH 仓库根目录。
+    pause
+    endlocal & exit /b 1
+)
 
 where pnpm >nul 2>nul
 if errorlevel 1 (
@@ -47,7 +54,7 @@ set "https_proxy=%DSH_PROXY%"
 echo [login] 插件代理: %DSH_PROXY%
 
 rem 已登录且凭据有效时直接退出，不重复走授权流程
-set "STATUS_FILE=%TEMP%\dsh-codex-login-status.txt"
+set "STATUS_FILE=%TEMP%\dsh-codex-login-status-%RANDOM%-%RANDOM%.txt"
 call pnpm dsh plugin --profile web exec dsh-openai-codex status >"%STATUS_FILE%" 2>&1
 findstr /c:"signed in" "%STATUS_FILE%" >nul 2>nul
 if not errorlevel 1 (
@@ -73,4 +80,17 @@ echo.
 echo [login] 登录成功。现在可以把梯子切回普通模式了——
 echo [login] 之后日常只要梯子应用开着，用 start.bat 启动 dsh 即可使用 Codex 模型。
 pause
-endlocal
+endlocal & exit /b 0
+
+:locate_repo
+if exist "%SCRIPT_DIR%package.json" if exist "%SCRIPT_DIR%apps\cli\src\bin.ts" (
+    cd /d "%SCRIPT_DIR%"
+    set "DSH_ROOT=%SCRIPT_DIR:~0,-1%"
+    exit /b 0
+)
+if exist "%SCRIPT_DIR%deepseek-harness\package.json" if exist "%SCRIPT_DIR%deepseek-harness\apps\cli\src\bin.ts" (
+    cd /d "%SCRIPT_DIR%deepseek-harness"
+    set "DSH_ROOT=%SCRIPT_DIR%deepseek-harness"
+    exit /b 0
+)
+exit /b 1

@@ -1,5 +1,6 @@
 @echo off
 setlocal
+set "SCRIPT_DIR=%~dp0"
 
 rem 一键启动 DSH 终端 TUI（dsh-TUI 插件，Claude Code 风格全屏交互终端）：
 rem   在当前窗口运行 pnpm dsh --profile dsh-tui
@@ -7,7 +8,13 @@ rem   自动探测本地代理并让 Node 全局 fetch 走代理（dsh-codex 等境外插件需要）
 rem 用法: start-tui.bat [附加参数]   例如 start-tui.bat --resume 恢复上次会话
 rem 建议: 用 Windows Terminal 体验更佳（像素字体/真彩/鼠标支持更好）
 
-cd /d "%~dp0"
+call :locate_repo
+if errorlevel 1 (
+    echo [start-tui] 未找到 DeepSeek Harness 源码。
+    echo [start-tui] 请先双击 update.bat 完成安装，或把本脚本放到 DSH 仓库根目录。
+    pause
+    endlocal & exit /b 1
+)
 
 where pnpm >nul 2>nul
 if errorlevel 1 (
@@ -40,5 +47,20 @@ if defined DSH_PROXY (
 )
 
 call pnpm dsh --profile dsh-tui %*
+set "EXIT_CODE=%ERRORLEVEL%"
+if not "%EXIT_CODE%"=="0" echo [start-tui] DSH TUI 启动失败，退出码 %EXIT_CODE%。
 pause
-endlocal
+endlocal & exit /b %EXIT_CODE%
+
+:locate_repo
+if exist "%SCRIPT_DIR%package.json" if exist "%SCRIPT_DIR%apps\cli\src\bin.ts" (
+    cd /d "%SCRIPT_DIR%"
+    set "DSH_ROOT=%SCRIPT_DIR:~0,-1%"
+    exit /b 0
+)
+if exist "%SCRIPT_DIR%deepseek-harness\package.json" if exist "%SCRIPT_DIR%deepseek-harness\apps\cli\src\bin.ts" (
+    cd /d "%SCRIPT_DIR%deepseek-harness"
+    set "DSH_ROOT=%SCRIPT_DIR%deepseek-harness"
+    exit /b 0
+)
+exit /b 1

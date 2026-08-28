@@ -1,5 +1,6 @@
 @echo off
 setlocal
+set "SCRIPT_DIR=%~dp0"
 
 rem 一键启动 DeepSeek Harness Web GUI（开放局域网）：
 rem   启动前自动清理端口占用（僵留的 dsh web 实例等，见 clear-port.ps1）
@@ -10,7 +11,24 @@ rem   在当前窗口运行 pnpm dsh web，输出双写到 %LOCALAPPDATA%\DeepSeekHarness\log
 rem 用法: start.bat [端口]   默认端口 3080
 rem 注意: 局域网开放意味着同网络设备都能访问本界面，公共 Wi-Fi 下请慎用
 
-cd /d "%~dp0"
+call :locate_repo
+if errorlevel 1 (
+    echo [start] 未找到 DeepSeek Harness 源码。
+    echo [start] 请先双击 update.bat 完成安装，或把本脚本放到 DSH 仓库根目录。
+    pause
+    endlocal & exit /b 1
+)
+
+rem Web 全家桶 0.3.x 仍依赖 0.1.1 的 apiProxy；0.1.2-alpha.1 已删除该服务。
+if exist "%USERPROFILE%\.dsh\profiles\web\node_modules\@linxin666\dsh-remote-web-ui\package.json" if not exist "%DSH_ROOT%\packages\host\apiproxy\package.json" (
+    findstr /c:"@deepseek-ai/dsh-host-apiproxy" "%USERPROFILE%\.dsh\profiles\web\node_modules\@linxin666\dsh-remote-web-ui\lib\index.js" >nul 2>nul
+    if not errorlevel 1 (
+        echo [start] 当前 DSH 与已安装的 Web 全家桶不兼容，无法启动。
+        echo [start] 请先运行 update.bat；它会切换到兼容版本 dsh-v0.1.1-rc.2。
+        pause
+        endlocal & exit /b 1
+    )
+)
 
 set "PORT=%~1"
 if "%PORT%"=="" set "PORT=3080"
@@ -23,10 +41,10 @@ if errorlevel 1 (
 )
 
 rem 清理端口占用（僵留实例等）；无占用时静默跳过
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0clear-port.ps1" %PORT%
+powershell -NoProfile -ExecutionPolicy Bypass -File "%DSH_ROOT%\clear-port.ps1" %PORT%
 
 rem node-pty 1.1.0 在 Windows ConPTY 清理时可能 AttachConsole 失败；启动前幂等加入安全回退
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0fix-node-pty-attach-console.ps1" || echo [start] node-pty 兼容补丁失败，终端关闭时可能出现 AttachConsole 错误。
+powershell -NoProfile -ExecutionPolicy Bypass -File "%DSH_ROOT%\fix-node-pty-attach-console.ps1" || echo [start] node-pty 兼容补丁失败，终端关闭时可能出现 AttachConsole 错误。
 
 rem 让 Node 全局 fetch 走本地代理：dsh-codex 等插件直接裸用 fetch()，不读
 rem HTTP(S)_PROXY；Node 24.5+ 的 NODE_USE_ENV_PROXY 使内置 undici fetch 遵循
@@ -53,12 +71,26 @@ if defined DSH_PROXY (
 
 rem 探测局域网 IP，仅用于展示手机访问地址
 set "LAN_IP="
-for /f "delims=" %%i in ('powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0get-lan-ip.ps1"') do set "LAN_IP=%%i"
+for /f "delims=" %%i in ('powershell -NoProfile -ExecutionPolicy Bypass -File "%DSH_ROOT%\get-lan-ip.ps1"') do set "LAN_IP=%%i"
 
 echo [start] 启动 dsh web（本机）: http://127.0.0.1:%PORT%
 if not "%LAN_IP%"=="" echo [start] 局域网/手机访问: http://%LAN_IP%:%PORT%
-start "" /min cmd /c "timeout /t 6 /nobreak >nul & start """" http://127.0.0.1:%PORT%"
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0start-web.ps1" -Port %PORT%
+powershell -NoProfile -ExecutionPolicy Bypass -File "%DSH_ROOT%\start-web.ps1" -Port %PORT%
+set "EXIT_CODE=%ERRORLEVEL%"
+if not "%EXIT_CODE%"=="0" echo [start] DSH Web 启动失败，退出码 %EXIT_CODE%。请查看上方错误和 latest 日志。
 pause
-endlocal
+endlocal & exit /b %EXIT_CODE%
+
+:locate_repo
+if exist "%SCRIPT_DIR%package.json" if exist "%SCRIPT_DIR%apps\cli\src\bin.ts" (
+    cd /d "%SCRIPT_DIR%"
+    set "DSH_ROOT=%SCRIPT_DIR:~0,-1%"
+    exit /b 0
+)
+if exist "%SCRIPT_DIR%deepseek-harness\package.json" if exist "%SCRIPT_DIR%deepseek-harness\apps\cli\src\bin.ts" (
+    cd /d "%SCRIPT_DIR%deepseek-harness"
+    set "DSH_ROOT=%SCRIPT_DIR%deepseek-harness"
+    exit /b 0
+)
+exit /b 1
