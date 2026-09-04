@@ -2,7 +2,7 @@
 setlocal
 set "SCRIPT_DIR=%~dp0"
 set "FRESH=0"
-if not defined DSH_REF set "DSH_REF=dsh-v0.1.1-rc.2"
+if not defined DSH_REF set "DSH_REF=dsh-v0.1.2-rc.1"
 
 rem 一键更新 / 安装 DeepSeek Harness + 社区插件 + Mnemon CLI（走 v2rayN 本地代理）：
 rem   1. 探测 v2rayN 本地 HTTP 代理端口（10808 -> 10809），也可显式传参
@@ -10,7 +10,7 @@ rem   2. 设置 git / pnpm 的代理环境变量（仅本脚本进程内生效）
 rem   3. 定位 DSH 源码：当前目录是 DSH 仓库则直接更新；当前目录下有已克隆的
 rem      deepseek-harness 目录则进入更新；都没有则 git clone 全新安装
 rem   4. 切换到与社区 Web 插件兼容的 DSH_REF + pnpm install + pnpm run build
-rem   5. 更新社区插件：web profile（dsh-web-ui-all / dsh-mnemon / dsh-codex，npm 源；
+rem   5. 更新社区插件：web profile（dsh-web-all / dsh-mnemon / dsh-codex，npm 源；
 rem      dsh-reasoning-effort，git 源）
 rem      与 dsh-tui profile（dsh-TUI）——失败只警告，不影响本体更新
 rem   6. 检查并更新 Mnemon CLI 到最新 release（update-mnemon.ps1，失败只警告）
@@ -111,8 +111,8 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [update] 更新社区插件（web: dsh-web-ui-all / dsh-mnemon）...
-call pnpm dsh plugin --profile web update --latest @linxin666/dsh-web-ui-all dsh-mnemon || echo [update] web 插件更新失败，不影响本体更新结果，可稍后手动重试。
+echo [update] 更新社区插件（web: dsh-web-all / dsh-mnemon）...
+call pnpm dsh plugin --profile web update --latest @linxin666/dsh-web-all dsh-mnemon || echo [update] web 插件更新失败，不影响本体更新结果，可稍后手动重试。
 
 echo [update] 更新 dsh-codex（保留 link/file/git 本地补丁来源）...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%update-codex.ps1" || echo [update] dsh-codex 更新失败，不影响本体更新结果，可稍后手动重试。

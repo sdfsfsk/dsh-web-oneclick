@@ -37,7 +37,7 @@
 
 - **代理**：默认探测本地 HTTP 代理 `127.0.0.1:10808` → `10809`（v2rayN 默认端口），也可以手动指定：`update.bat 7890`（Clash 默认端口）。代理环境变量只在脚本进程内生效。
 - **首次运行自动安装**：当前目录不是 DSH 仓库、且 `deepseek-harness\` 子目录也没有源码时，`update.bat` 会自动 `git clone` 安装并构建（全新安装只构建本体，社区插件与 Mnemon 按下方说明另行安装）；已克隆过则自动进入 `deepseek-harness\` 目录执行更新。
-- **社区插件自动更新**：默认更新 web profile 的 `@linxin666/dsh-web-ui-all`、`dsh-mnemon`、`dsh-codex` 和 dsh-tui profile 的 `@deepseek-harness-tui/dsh-tui`（见下方“社区插件”）。`dsh-codex` 若使用 `link:`、`file:` 或 Git 来源，脚本会保留该本地／开发补丁，不会改回 npm；没装插件时这一步会报警告但不影响本体更新。
+- **社区插件自动更新**：默认更新 web profile 的 `@linxin666/dsh-web-all`、`dsh-mnemon`、`dsh-codex` 和 dsh-tui profile 的 `@deepseek-harness-tui/dsh-tui`（见下方“社区插件”）。`dsh-codex` 若使用 `link:`、`file:` 或 Git 来源，脚本会保留该本地／开发补丁，不会改回 npm；没装插件时这一步会报警告但不影响本体更新。
 - **Mnemon CLI 自动更新**：仅当你的 web profile 装了 `dsh-mnemon` 记忆插件才有意义；CLI 本体装在 `%LOCALAPPDATA%\Programs\mnemon`。
 
 ## 局域网开放（手机访问）
@@ -69,7 +69,7 @@ DSH 官方出于安全考虑在 CLI 里禁止了 `--host 0.0.0.0`，而 webserve
 
 ```bat
 rem 皮肤+功能全家桶（任务看板/Git 图谱/皮肤中心/移动端远程/SSH 面板等）
-pnpm dsh plugin --profile web add @linxin666/dsh-web-ui-all
+pnpm dsh plugin --profile web add @linxin666/dsh-web-all
 
 rem Mnemon 记忆系统（另外还需要装 Mnemon CLI 本体，见下）
 pnpm dsh plugin --profile web add dsh-mnemon

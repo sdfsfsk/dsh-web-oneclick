@@ -95,7 +95,7 @@ function Add-MinimumReleaseAgeExclusions {
 }
 
 $policies = [ordered]@{
-    web = @('@linxin666/*', '@morlay/*', 'dsh-mnemon', 'dsh-codex')
+    web = @('@linxin666/*', '@morlay/*', '@codemirror/*', '@iconify/*', 'dsh-mnemon', 'dsh-codex')
     'dsh-tui' = @('@deepseek-harness-tui/dsh-tui', 'dsh-codex')
 }
 
