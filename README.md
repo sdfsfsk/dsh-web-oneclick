@@ -10,6 +10,7 @@
 | --- | --- |
 | `start.bat` | 一键启动 Web GUI：自动清理端口占用（僵留实例直接结束再启动，按端口动态解析 PID、不假定进程名），探测本地代理并让 Node 全局 fetch 走代理（dsh-codex 等境外插件需要），探测并显示局域网访问地址，自动打开浏览器，同时把控制台输出持久化到 `%LOCALAPPDATA%\DeepSeekHarness\logs` |
 | `start-web.ps1` | Web 启动与日志助手：控制台和 UTF-8 日志双写，记录启动/退出时间与退出码，维护 `dsh-web-latest.txt` 并保留最近 20 份日志 |
+| `configure-codex-models.bat` | Web/TUI 共用的模型缓存配置：保留自定义 `DSH_CODEX_MODELS_CACHE`，否则按 `CODEX_HOME` 或用户目录定位 Codex 模型缓存，并显示当前来源 |
 | `start-tui.bat` | 一键启动终端 TUI（dsh-TUI 插件，Claude Code 风格全屏交互终端）：`start-tui.bat --resume` 恢复上次会话；同样自动接入本地代理 |
 | `update.bat` | 一键更新：探测本地代理 → 切换到兼容的 DSH 标签 → `pnpm install` → 清理并构建 → 更新社区插件（web 与 dsh-tui 两个 profile，含 dsh-codex、dsh-reasoning-effort） → 更新 Mnemon CLI。首次运行找不到 DSH 源码时自动转为安装：`git clone` → 复制一键脚本进仓库根目录 → 构建 |
 | `login-codex.bat` | 一键令牌登录 dsh-codex（设备码方式）：自动探测本地代理并注入 `NODE_USE_ENV_PROXY`，先检查登录状态（已登录且凭据有效则直接退出，不重复授权），未登录时终端显示授权网址和码，浏览器打开输入即可。登录前需把梯子切到**全局代理**模式，登录成功后可切回 |
@@ -162,6 +163,21 @@ allowBuilds:
 
 **dsh-codex 连不上 / 模型请求失败？**
 dsh-codex 走的是 ChatGPT 后端（境外服务），而插件和 pi-ai 都裸用 Node 全局 `fetch()`，**不读** `HTTP(S)_PROXY` 环境变量。解法已内置进 `start.bat` / `start-tui.bat`：利用 Node 24.5+ 的 `NODE_USE_ENV_PROXY=1` 让内置 undici fetch 遵循代理环境变量，脚本会自动探测 `127.0.0.1:10808 → 10809` 并设置，同时用 `NO_PROXY=localhost,127.0.0.1,api.deepseek.com` 把回环和 DeepSeek API 排除在代理之外。代理不在默认端口时先 `set DSH_PROXY=http://127.0.0.1:7890` 再运行脚本。两个注意点：Node 版本需 ≥ 24.5（`node -v` 确认）；在 dsh 设置面板里登录即可（面板运行在已被脚本注入代理环境的 dsh web 进程里），若要用 `dsh plugin exec dsh-openai-codex login` 命令行登录，需先手动 `set NODE_USE_ENV_PROXY=1` 和 `set HTTPS_PROXY=...`。
+
+**Codex 已经能用 GPT-6，DSH 却找不到新模型？**
+
+旧版 dsh-codex 只使用随包模型名单。本启动器会把 Codex 模型缓存路径传给支持缓存发现的插件版本：优先保留 `DSH_CODEX_MODELS_CACHE`，否则使用 `%CODEX_HOME%\models_cache.json`，未设置 `CODEX_HOME` 时使用 `%USERPROFILE%\.codex\models_cache.json`。Web/TUI 启动时都会打印来源；缓存不存在时继续使用插件随包目录。
+
+先更新并打开一次 Codex CLI/Desktop，使其刷新模型缓存，再更新并构建 dsh-codex。使用 `link:` 的开发版本需要在对应 checkout 中更新代码并运行 `pnpm install`、`pnpm run build`；`update.bat` 会保留本地链接，因此不会替你拉取或编译它。重启 DSH 后，在 **设置 → OpenAI Codex** 中启用新模型；原有的模型勾选会保留。只有支持缓存发现的插件版本才会读取该环境变量，单独更新启动器不能补齐旧插件的模型目录。
+
+自定义缓存文件可在启动前执行：
+
+```bat
+set "DSH_CODEX_MODELS_CACHE=D:\Codex Data\models_cache.json"
+start.bat
+```
+
+启动器不修改 Codex 登录凭据或缓存。从一键脚本目录启动已安装的 `deepseek-harness` 子目录时，Web 启动器会使用入口旁的最新版助手，并显式传入 DSH 源码目录，避免继续执行子目录里旧的助手脚本。
 
 ## 许可证
 
