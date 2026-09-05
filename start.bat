@@ -41,15 +41,17 @@ if errorlevel 1 (
 )
 
 rem 清理端口占用（僵留实例等）；无占用时静默跳过
-powershell -NoProfile -ExecutionPolicy Bypass -File "%DSH_ROOT%\clear-port.ps1" %PORT%
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%clear-port.ps1" %PORT%
 
 rem node-pty 1.1.0 在 Windows ConPTY 清理时可能 AttachConsole 失败；启动前幂等加入安全回退
-powershell -NoProfile -ExecutionPolicy Bypass -File "%DSH_ROOT%\fix-node-pty-attach-console.ps1" || echo [start] node-pty 兼容补丁失败，终端关闭时可能出现 AttachConsole 错误。
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%fix-node-pty-attach-console.ps1" || echo [start] node-pty 兼容补丁失败，终端关闭时可能出现 AttachConsole 错误。
 
 rem 让 Node 全局 fetch 走本地代理：dsh-codex 等插件直接裸用 fetch()，不读
 rem HTTP(S)_PROXY；Node 24.5+ 的 NODE_USE_ENV_PROXY 使内置 undici fetch 遵循
 rem 代理环境变量。NO_PROXY 排除回环与 DeepSeek API，避免国内服务被绕到境外。
 rem 手动指定代理：先 set DSH_PROXY=http://127.0.0.1:7890 再运行本脚本。
+call "%SCRIPT_DIR%configure-codex-models.bat"
+
 set "NODE_USE_ENV_PROXY=1"
 set "NO_PROXY=localhost,127.0.0.1,api.deepseek.com"
 if not defined DSH_PROXY (
@@ -71,12 +73,12 @@ if defined DSH_PROXY (
 
 rem 探测局域网 IP，仅用于展示手机访问地址
 set "LAN_IP="
-for /f "delims=" %%i in ('powershell -NoProfile -ExecutionPolicy Bypass -File "%DSH_ROOT%\get-lan-ip.ps1"') do set "LAN_IP=%%i"
+for /f "delims=" %%i in ('powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%get-lan-ip.ps1"') do set "LAN_IP=%%i"
 
 echo [start] 启动 dsh web（本机）: http://127.0.0.1:%PORT%
 if not "%LAN_IP%"=="" echo [start] 局域网/手机访问: http://%LAN_IP%:%PORT%
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%DSH_ROOT%\start-web.ps1" -Port %PORT%
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%start-web.ps1" -Port %PORT% -RepositoryRoot "%DSH_ROOT%"
 set "EXIT_CODE=%ERRORLEVEL%"
 if not "%EXIT_CODE%"=="0" echo [start] DSH Web 启动失败，退出码 %EXIT_CODE%。请查看上方错误和 latest 日志。
 pause

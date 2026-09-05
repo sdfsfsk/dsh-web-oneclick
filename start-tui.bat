@@ -27,6 +27,8 @@ rem 让 Node 全局 fetch 走本地代理：dsh-codex 等插件直接裸用 fetch()，不读
 rem HTTP(S)_PROXY；Node 24.5+ 的 NODE_USE_ENV_PROXY 使内置 undici fetch 遵循
 rem 代理环境变量。NO_PROXY 排除回环与 DeepSeek API，避免国内服务被绕到境外。
 rem 手动指定代理：先 set DSH_PROXY=http://127.0.0.1:7890 再运行本脚本。
+call "%SCRIPT_DIR%configure-codex-models.bat"
+
 set "NODE_USE_ENV_PROXY=1"
 set "NO_PROXY=localhost,127.0.0.1,api.deepseek.com"
 if not defined DSH_PROXY (

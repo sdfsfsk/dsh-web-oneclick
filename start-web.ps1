@@ -5,7 +5,9 @@
     [ValidateRange(1, 100)]
     [int]$KeepLogs = 20,
 
-    [string]$LogDirectory = ''
+    [string]$LogDirectory = '',
+
+    [string]$RepositoryRoot = $PSScriptRoot
 )
 
 $ErrorActionPreference = 'Stop'
@@ -48,7 +50,7 @@ Write-ConsoleAndLog "[start] DSH Web log: $logPath"
 Write-ConsoleAndLog "[start] Started at $((Get-Date).ToString('o')); port=$Port; wrapperPid=$PID"
 
 try {
-    Push-Location $PSScriptRoot
+    Push-Location -LiteralPath $RepositoryRoot
     try {
         & cmd.exe /d /s /c "pnpm dsh web --port $Port 2>&1" | ForEach-Object {
             Write-ConsoleAndLog ([string]$_)
