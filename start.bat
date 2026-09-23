@@ -19,15 +19,14 @@ if errorlevel 1 (
     endlocal & exit /b 1
 )
 
-rem Web 全家桶 0.3.x 仍依赖 0.1.1 的 apiProxy；0.1.2-alpha.1 已删除该服务。
-if exist "%USERPROFILE%\.dsh\profiles\web\node_modules\@linxin666\dsh-remote-web-ui\package.json" if not exist "%DSH_ROOT%\packages\host\apiproxy\package.json" (
-    findstr /c:"@deepseek-ai/dsh-host-apiproxy" "%USERPROFILE%\.dsh\profiles\web\node_modules\@linxin666\dsh-remote-web-ui\lib\index.js" >nul 2>nul
-    if not errorlevel 1 (
-        echo [start] 当前 DSH 与已安装的 Web 全家桶不兼容，无法启动。
-        echo [start] 请先运行 update.bat；它会切换到兼容版本 dsh-v0.1.1-rc.2。
-        pause
-        endlocal & exit /b 1
-    )
+rem 构建产物自检：DSH 的 Web 客户端 bundle 由 pnpm run build 产出，构建记录落在
+rem .dsh-build\client-build-environment.json。产物缺失或与当前源码不匹配时，pnpm 11 会在
+rem 启动瞬间自行触发 install（verify-deps-before-run），网络一有问题就会把依赖事故伪装成
+rem “启动失败”。这里只做显式提示，不擅自构建，避免每次启动都付出构建代价。
+if not exist "%DSH_ROOT%\.dsh-build\client-build-environment.json" (
+    echo [start] 警告：未检测到构建产物（.dsh-build\client-build-environment.json）。
+    echo [start] 请先运行 update.bat 完成 pnpm install + pnpm run build 再启动。
+    echo [start] 否则 pnpm 会在启动瞬间自动安装依赖，网络异常时将直接以退出码 1 结束。
 )
 
 set "PORT=%~1"
