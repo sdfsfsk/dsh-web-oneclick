@@ -1,0 +1,27 @@
+[package]
+name = "panel-window"
+version = "1.0.0"
+edition = "2021"
+description = "DSH 管理面板的原生窗口壳（无边框窗口 + WebView2，风格与 DSH-X 一致）"
+
+[[bin]]
+name = "panel-window"
+path = "src/main.rs"
+
+[build-dependencies]
+winresource = "0.1"
+
+[profile.release]
+lto = true
+strip = true
+
+[dependencies]
+# 与上游 dsh-x 的 launcher 用同一套库，窗口行为（无边框、逻辑像素尺寸、DPI）才对得上
+tao = "0.37.0"
+wry = "0.57.0"
+windows-sys = { version = "0.60", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
